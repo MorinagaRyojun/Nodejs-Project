@@ -3,8 +3,10 @@ const server = express();
 const expressSsession = require('express-session')
 const bodyParser = require('body-parser');
 const router = require('./routes');
-const middleware = require('./configs/middleware')
+const middleware = require('./configs/middleware');
 const PORT = 3000;
+
+
 
 //ใช้ตั้วค่า Session ในระบบ
 server.use(expressSsession({
