@@ -17,8 +17,8 @@ server.use(expressSsession({
   }))
 
 // ตั้งค่า bodyParser สำหรับ Parse ตัวแปร
-server.use(bodyParser.urlencoded({ extended: false }));
-server.use(bodyParser.json());
+server.use(bodyParser.urlencoded({ extended: false , limit: '500MB'}));
+server.use(bodyParser.json({ limit: '500MB' }));
 
 
 // สร้าง Custom function Middleware มาใช้จัดการ Errors ต่างๆ

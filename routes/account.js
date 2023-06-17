@@ -58,8 +58,8 @@ router.post('/logout', (req, res) => {
     try {
         delete req.session.userLogin;
         res.json({ message: 'Logout' });
-    } catch (ex) {
-        res.errorEx(ex);
+    } catch (error) {
+        res.errorEx(error);
     }
 });
 
