@@ -1,4 +1,6 @@
 const router = require('express').Router();
+const service = require('../services/equipment');
+const { check } = require('express-validator');
 const base64Img = require('base64-img');
 const fs = require('fs');
 const path = require('path');
@@ -9,16 +11,20 @@ router.get('/', (req,res) => {
     res.json({message: 'GET Equipment Page'})
 })
 
-router.post('/', (req,res) => {
+router.post('/',[
+    check('eq_name').not().isEmpty(),
+    check('eq_image').not().isEmpty(),
+], async (req,res) => {
     try {
+        req.validate();
         // ตรวจสอบ Dir ท่าไม่มีให้าร้างใหม่ 
         if(!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
         if(!fs.existsSync(equipDir)) fs.mkdirSync(equipDir);
         // เปลงข้อมูลรูปภาพ
-        const fileImg = base64Img.imgSync(req.body.eq_image, equipDir, `equip-${Date.now()}`).replace(`${equipDir}/`, '');
-        res.json({ message: fileImg});
+        req.body.eq_image = base64Img.imgSync(req.body.eq_image, equipDir, `equip-${Date.now()}`).replace(`${equipDir}/`, '');
+        res.json({ message: await service.onCreate(req.body)});
     } catch (ex) {
-        res.error(ex);
+        res.errorEx(ex);
         res.json({message: 'POST Equipment Page'})
     }  
 });
