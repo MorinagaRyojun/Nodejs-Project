@@ -31,5 +31,16 @@ router.post('/',[
     }  
 });
 
-
+router.delete('/:id', async (req, res) => {
+    try {
+        const item = await service.findValue({eq_id: req.params.id});
+        if (!item) throw new Error('Not found item.');
+        const deleteItem = await service.onDelete(item.eq_id);
+        const deleteImg = path.join(equipDir, item.eq_image);
+        if (fs.existsSync(deleteImg)) fs.unlinkSync(deleteImg);
+        res.send(deleteItem)
+    } catch (error){
+        res.errorEx(error);
+    }
+})
 module.exports = router;
