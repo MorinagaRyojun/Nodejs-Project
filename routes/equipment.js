@@ -11,6 +11,7 @@ router.get('/', (req,res) => {
     res.json({message: 'GET Equipment Page'})
 })
 
+// Api สำหรับเพิ่มข้อมูล และ Add รูปภาพ
 router.post('/',[
     check('eq_name').not().isEmpty(),
     check('eq_image').not().isEmpty(),
@@ -24,9 +25,11 @@ router.post('/',[
         req.body.eq_image = base64Img.imgSync(req.body.eq_image, equipDir, `equip-${Date.now()}`).replace(`${equipDir}/`, '');
         res.json({ message: await service.onCreate(req.body)});
     } catch (ex) {
+        const FileImgPath = path.join(equipDir, req.body.eq_image);
+        if (fs.existsSync(FileImgPath)) fs.unlinkSync(FileImgPath);
         res.errorEx(ex);
-        res.json({message: 'POST Equipment Page'})
     }  
 });
+
 
 module.exports = router;
