@@ -1,14 +1,21 @@
 const router = require('express').Router();
 const service = require('../services/equipment');
-const { check } = require('express-validator');
+const { check, query } = require('express-validator');
 const base64Img = require('base64-img');
 const fs = require('fs');
 const path = require('path');
 const uploadDir = path.resolve('uploads');
 const equipDir = path.join(uploadDir,'equipments')
 
-router.get('/', (req,res) => {
-    res.json({message: 'GET Equipment Page'})
+router.get('/', [
+    query('page').not().isEmpty().isInt().toInt()
+], async (req,res) => {
+    try {
+        req.validate();
+        res.json( await service.find(req.query));
+    } catch (ex) {
+        res.errorEx(ex);
+    }
 })
 
 // Api สำหรับเพิ่มข้อมูล และ Add รูปภาพ
