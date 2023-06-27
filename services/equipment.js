@@ -7,6 +7,14 @@ module.exports = {
             const sqls = {
                 count: 'SELECT COUNT(*) as row_count FROM tb_equipments',
                 select: 'SELECT * FROM tb_equipments'
+            };
+
+            if(value.search_key && value.search_text) {
+                const key = value.search_key;
+                const txt = value.search_text;
+                const sql_Search = ` WHERE ${connection.escapeId(key)} LIKE ${connection.escape(`%${txt}%`)}`;
+                sqls.count += sql_Search;
+                sqls.select += sql_Search;
             }
             //หาจำนวนหน้า
             sqls.select += ` limit ${connection.escape(startPage)},${limitPage}`;
