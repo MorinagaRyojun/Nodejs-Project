@@ -7,6 +7,7 @@ const path = require('path');
 const uploadDir = path.resolve('uploads');
 const equipDir = path.join(uploadDir,'equipments')
 
+//http://localhost:3000/api/equipment?page=1&search_key=eq_name&search_text=1
 router.get('/', [
     query('page').not().isEmpty().isInt().toInt()
 ], async (req,res) => {
@@ -17,6 +18,18 @@ router.get('/', [
         res.errorEx(ex);
     }
 })
+
+// แสดงข้อมูล 1 Recode
+router.get('/:id', async (req,res) => {
+    try {
+        const equipment = await service.findValue({eq_id : req.params.id});
+        if (!equipment) throw new Error('Not found item.')
+        equipment.eq_image = base64Img.base64Sync(path.join(equipDir, equipment.eq_image));
+        res.json(equipment);
+    } catch (ex) {
+        res.errorEx(ex);
+    }
+});
 
 // Api สำหรับเพิ่มข้อมูล และ Add รูปภาพ
 router.post('/',[
@@ -69,13 +82,14 @@ router.put('/:id', [
 
         req.body.eq_image = base64Img.imgSync(req.body.eq_image, equipDir, `equip-${Date.now()}`).replace(`${equipDir}/`, '');
         const upadteItem = await service.onUpdate(req.params.id,req.body)
-        res.json({ upadteItem });
+        
         // หากมีการส่ง Upadte รูป ให้ลบรูปเก่าด้วย
         if (upadteItem.affectedRows > 0) {
             const deleteImg = path.join(equipDir, item.eq_image);
             if (fs.existsSync(deleteImg)) fs.unlinkSync(deleteImg);
         }
 
+        res.json({ upadteItem });
     } catch (ex) {
         res.errorEx(ex);
     }
