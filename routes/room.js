@@ -19,6 +19,18 @@ router.get('/', [
     }
 })
 
+// แสดงข้อมูล 1 Recode
+router.get('/:id', async (req,res) => {
+    try {
+        const room = await service.findRoom({r_id : req.params.id});
+        if (!room) throw new Error('Not found room.')
+        room.r_image = base64Img.base64Sync(path.join(roomDir, room.r_image));
+        res.json(room);
+    } catch (ex) {
+        res.errorEx(ex);
+    }
+});
+
 //เพิ่มข้อมูลการจองห้อง
 router.post('/',[
     check('r_image').not().isEmpty(),
