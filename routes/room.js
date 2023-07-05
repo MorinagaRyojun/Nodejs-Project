@@ -97,6 +97,8 @@ router.put('/:id',[
         }
         res.json(upadteItem);
     } catch(ex) {
+        const FileImgPath = path.join(roomDir, req.body.r_image || '');
+        if (fs.existsSync(FileImgPath)) fs.unlinkSync(FileImgPath);
         res.errorEx(ex);
     }
 })

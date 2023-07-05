@@ -91,6 +91,8 @@ router.put('/:id', [
 
         res.json({ upadteItem });
     } catch (ex) {
+        const FileImgPath = path.join(equipDir, req.body.eq_image || '');
+        if (fs.existsSync(FileImgPath)) fs.unlinkSync(FileImgPath);
         res.errorEx(ex);
     }
 })
