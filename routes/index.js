@@ -7,5 +7,7 @@ router.use('/account', account); // import Rout ทั่วไป เก็บ�
 router.use('/equipment', authen, require('./equipment')); // import Rout แบบเอามารวบไว้ในที่เดียว สามารถใช้ได้เหมือนกัน
 // Room route
 router.use('/room', authen, require('./room'));
+// Booking route
+router.use('/booking', authen, require('./booking'));
 
 module.exports = router;
