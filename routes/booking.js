@@ -1,6 +1,8 @@
 const router = require('express').Router();
 const { check, query } = require('express-validator');
 const roomService = require('../services/room');
+const bookingService = require("../services/booking");
+
 
 //แสดงรายการห้องประชุม
 router.get('/',[query('page').isInt()], async (req,res) => {
@@ -12,7 +14,7 @@ router.get('/',[query('page').isInt()], async (req,res) => {
     }
     
 });
-//ทำถึงตรงนี้เดียวทำต่อ
+//เพิ่มการจองห้องประชุม
 router.post('/',[
     check('bk_title').not().isEmpty(),
     check('bk_detail').not().isEmpty(),
@@ -27,10 +29,10 @@ router.post('/',[
         }
         return isArray
     })
-],(req,res) => {
+], async (req,res) => {
     try {
         req.validate();
-        res.json(req.body);
+        res.json( await bookingService.onCreate());
     } catch (ex) {
         res.errorEx(ex);
     }
