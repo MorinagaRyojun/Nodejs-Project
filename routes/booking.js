@@ -16,6 +16,7 @@ router.get('/',[query('page').isInt()], async (req,res) => {
 });
 //เพิ่มการจองห้องประชุม
 router.post('/',[
+    check('tb_rooms_r_id').isInt(),
     check('bk_title').not().isEmpty(),
     check('bk_detail').not().isEmpty(),
     check('bk_time_start').custom(value => {
@@ -32,7 +33,8 @@ router.post('/',[
 ], async (req,res) => {
     try {
         req.validate();
-        res.json( await bookingService.onCreate());
+        req.body.tb_users_u_id = req.session.userLogin.u_id;
+        res.json( await bookingService.onCreate(req.body));
     } catch (ex) {
         res.errorEx(ex);
     }
