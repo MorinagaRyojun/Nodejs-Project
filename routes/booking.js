@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { check, query } = require('express-validator');
+const { check, query, param } = require('express-validator');
 const roomService = require('../services/room');
 const bookingService = require("../services/booking");
 
@@ -14,6 +14,31 @@ router.get('/',[query('page').isInt()], async (req,res) => {
     }
     
 });
+
+// แสดงประวัติการจองห้องประชุม
+router.get('/history', [
+    query('page').isInt()
+], async (req, res) => {
+    try {
+        req.validate();
+        res.json(await bookingService.findHistory(
+            req.query,
+            req.session.userLogin.u_id
+        ));
+    }
+    catch (ex) { res.errorEx(ex); }
+});
+
+// แสดงรายละเอียดของห้องประชุม
+router.get('/room/:id', async (req, res) => {
+    try {
+        const model = await roomService.findDetailForBooking(req.params.id);
+        if (!model) throw new Error('Not found item.');
+        res.json(model);
+    }
+    catch (ex) { res.errorEx(ex); }
+});
+
 //เพิ่มการจองห้องประชุม
 router.post('/',[
     check('tb_rooms_r_id').isInt(),
@@ -38,6 +63,55 @@ router.post('/',[
     } catch (ex) {
         res.errorEx(ex);
     }
-})
+});
+
+//#region สำหรับ Admin
+
+//ดึงข้อมูลห้องประชุมมาทำ Select
+router.get('/rooms/select', async (req,res) => {
+    try {
+        res.json(await roomService.findSelect());
+    } catch(ex) {
+        res.errorEx(ex);
+    }
+});
+
+//ดึงข้อมูลการจองห้องประชุมจาก Room Id มาใส่ใน Calendar
+router.get('/calendar/room/:id', [
+    param('id').isInt()
+], async (req,res) => {
+    try {
+        req.validate();
+        res.json(await bookingService.findByRoomId(req.params.id));
+    } catch(ex) {
+        res.errorEx(ex);
+    }
+});
+
+// แสดงรายการจจองห้องประชุม
+router.get('/manage', [query('page').isInt()], async (req,res) => {
+    try {
+        req.validate();
+        res.json(await bookingService.find(req.query));
+    } catch(ex) {
+        res.errorEx(ex);
+    }
+});
+
+// แก้ไขสถานะการจองเป็น อนุมัติ กับ ไม่อนุมัติ
+router.put('/manage/:id', [
+    param('id').isInt(),
+    check('bk_status').isIn(['allowed', 'not allowed'])
+], async (req, res) => {
+    try {
+        req.validate();
+        const findItem = await bookingService.findById(req.params.id);
+        if (!findItem) throw new Error('Not found item.');
+        res.json(await bookingService.onUpdate(findItem.bk_id, req.body));
+    }
+    catch (ex) { res.errorEx(ex); }
+});
+
+//#endregion
 
 module.exports = router;

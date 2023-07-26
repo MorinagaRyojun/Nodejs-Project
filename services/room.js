@@ -1,6 +1,31 @@
 const connection = require("../configs/database");
 const table = 'tb_rooms'
 module.exports = {
+    findSelect() {
+        return new Promise((resolve, reject) => {
+            connection.query(`SELECT r_id, r_name FROM ${table}`, (error, result) => {
+                if (error) return reject(error);
+                resolve(result);
+            })
+        })
+    },
+    findDetail(id) {
+        return new Promise((resolve,reject) => {
+            connection.query(`
+            SELECT 
+                r_id,
+                r_image,
+                r_name,
+                r_capacity,
+                (SELECT COUNT(*) FROM tb_bookings WHERE tb_rooms_r_id = r_id AND bk_status = 'pending') as r_booking,
+                r_detail
+            FROM ${table}
+            WHERE r_id = ?`, [id],(error,result) => {
+                if (error) return reject(error);
+                resolve(result.length > 0 ? result[0] : null);
+            })
+        })
+    },
     find(value) {
         return new Promise((resolve,reject) => {
             const limitPage = 3;
