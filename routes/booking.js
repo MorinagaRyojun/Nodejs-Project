@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { check, query, param } = require('express-validator');
 const roomService = require('../services/room');
 const bookingService = require("../services/booking");
-
+const { isInRole } = require('../configs/security');
 
 //แสดงรายการห้องประชุม
 router.get('/',[query('page').isInt()], async (req,res) => {
@@ -65,8 +65,6 @@ router.post('/',[
     }
 });
 
-//#region สำหรับ Admin
-
 //ดึงข้อมูลห้องประชุมมาทำ Select
 router.get('/rooms/select', async (req,res) => {
     try {
@@ -76,8 +74,12 @@ router.get('/rooms/select', async (req,res) => {
     }
 });
 
+
+
+//#region สำหรับ Admin
+
 //ดึงข้อมูลการจองห้องประชุมจาก Room Id มาใส่ใน Calendar
-router.get('/calendar/room/:id', [
+router.get('/calendar/room/:id', isInRole(['admin']), [
     param('id').isInt()
 ], async (req,res) => {
     try {
@@ -89,7 +91,7 @@ router.get('/calendar/room/:id', [
 });
 
 // แสดงรายการจจองห้องประชุม
-router.get('/manage', [query('page').isInt()], async (req,res) => {
+router.get('/manage', isInRole(['admin']), [query('page').isInt()], async (req,res) => {
     try {
         req.validate();
         res.json(await bookingService.find(req.query));
@@ -99,7 +101,7 @@ router.get('/manage', [query('page').isInt()], async (req,res) => {
 });
 
 // แก้ไขสถานะการจองเป็น อนุมัติ กับ ไม่อนุมัติ
-router.put('/manage/:id', [
+router.put('/manage/:id', isInRole(['admin']), [
     param('id').isInt(),
     check('bk_status').isIn(['allowed', 'not allowed'])
 ], async (req, res) => {
@@ -112,6 +114,16 @@ router.put('/manage/:id', [
     catch (ex) { res.errorEx(ex); }
 });
 
+// ลบรายข้อมูลห้องประชุม
+router.delete('/manage/:id', isInRole(['admin']), [param('id').isInt()], async (req, res) => {
+    try {
+        req.validate();
+        const findItem = await bookingService.findById(req.params.id);
+        if (!findItem) throw new Error('Not found item.');
+        res.json(await bookingService.onDelete(findItem.bk_id));
+    }
+    catch (ex) { res.errorEx(ex); }
+});
 //#endregion
 
 module.exports = router;

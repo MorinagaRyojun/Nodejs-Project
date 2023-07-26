@@ -12,11 +12,17 @@ const security = {
     // เอาไว้ตรวจว่ามีการ Login แล้วหรือยัง ท่ามี Next ท่าไม่ Error
     authen( req, res, next) {
         req.session.userLogin = {
+            // "u_id": 5,
+            // "u_username": "admin",
+            // "u_firstname": "tanyaboon",
+            // "u_lastname": "morinaga",
+            // "u_role": "admin"
+
             "u_id": 5,
             "u_username": "admin",
             "u_firstname": "tanyaboon",
             "u_lastname": "morinaga",
-            "u_role": "admin"
+            "u_role": "user"
         };
         try {
             if (req.session.userLogin) {
@@ -25,6 +31,19 @@ const security = {
             throw new Error('Unauthoriza.');
         } catch (ex) {
             res.errorEx(ex, 401);
+        }
+    },
+    // ตรวจสอบสิทธิ์การเข้าใช้งาน
+    isInRole(roles = []) {
+        return (req, res, next) => {
+            try {
+                if (roles.indexOf(req.session.userLogin.u_role) >= 0) {
+                    return next();
+                }
+                throw new Error('Unauthoriza.');
+            } catch (ex) {
+                res.errorEx(ex, 401);
+            }
         }
     }
 }

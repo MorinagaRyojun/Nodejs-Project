@@ -6,6 +6,28 @@ const table = {
     bkeq: "tb_bookings_has_tb_equipments"
 }
 module.exports = {
+    findByCheckDateTime({ bk_time_start, bk_time_end, tb_rooms_r_id }) {
+        return new Promise((resolve, reject) => {
+            const start = new Date(bk_time_start).toLocaleString();
+            const end = new Date(bk_time_end).toLocaleString();
+            connection.query(`
+                SELECT COUNT(*) AS bk_count
+                FROM ${table.bk}
+                WHERE 
+                    tb_rooms_r_id = ${tb_rooms_r_id}
+                AND
+                    (
+                        bk_time_start BETWEEN ${connection.escape(start)} AND ${connection.escape(end)}
+                        OR
+                        bk_time_end BETWEEN ${connection.escape(start)} AND ${connection.escape(end)}
+                    )
+                `, (error, result) => {
+                    if (error) return reject(error);
+
+                    resolve(result.length > 0 ? result[0].bk_count > 0 : false);
+                })
+        });
+    },
     findById(id) {
         return new Promise((resolve, reject) => {
             connection.query(`SELECT * FROM ${table.bk} WHERE bk_id = ?`, [id], (error, result) => {
@@ -100,43 +122,71 @@ module.exports = {
     
     onCreate(value) {
         return new Promise((resolve, reject) => {
-            connection.beginTransaction(err => {
-                if(err) return reject(err);
-                const bkModel = {
-                    bk_title: value.bk_title,
-                    bk_detail: value.bk_detail,
-                    bk_time_start: new Date(value.bk_time_start),
-                    bk_time_end: new Date(value.bk_time_end),
-                    tb_users_u_id: value.tb_users_u_id,
-                    tb_rooms_r_id: value.tb_rooms_r_id
-                };
-                connection.query(`INSERT INTO ${table.bk} SET ?`, bkModel, (err, result) => {
-                    if (err) {
-                        connection.rollback();
-                        return reject(err);
-                    }
-                    //บีนทึกข้อมูลการจองเข้าสู่ tb_bookings_has_tb_equipments
-                    const tb_bookings_bk_id = result.insertId;
-                    const bkeqModel = [];
-                    value.equipments.forEach(tb_equipments_eq_id => {
-                        bkeqModel.push([tb_bookings_bk_id, tb_equipments_eq_id])
-                    });
-                    connection.query(`INSERT INTO ${table.bkeq} (tb_bookings_bk_id, tb_equipments_eq_id) VALUES ?`, [bkeqModel], (err, result) => {
-                        if (err) {
-                            connection.rollback();
-                            return reject(err);
+
+            // ตรวจสอบวันว่ามีการจองวันที่เลือกไปแล้วหรือยังในระบบ
+            this.findByCheckDateTime(value)
+                .then(checkInvalid => {
+                    if (checkInvalid)
+                        throw new Error('Cannot add this datetime please check again.');
+
+                    connection.beginTransaction(tsError => {
+                        if (tsError) return reject(tsError);
+
+                        // บันข้อมูลเข้าสู่ตาราง tb_bookings
+                        const bkModel = {
+                            bk_title: value.bk_title,
+                            bk_detail: value.bk_detail,
+                            bk_time_start: new Date(value.bk_time_start),
+                            bk_time_end: new Date(value.bk_time_end),
+                            tb_users_u_id: value.tb_users_u_id,
+                            tb_rooms_r_id: value.tb_rooms_r_id
+                        };
+
+                        // ตรวจสอบว่าวันที่เริ่ม น้อยกว่าวันที่สิ้นสุด
+                        if (bkModel.bk_time_start >= bkModel.bk_time_end) {
+                            return reject(new Error('The start date must be more than end date.'));
                         }
-                        connection.commit(err => {
-                            if (err) {
+
+                        connection.query(`INSERT INTO ${table.bk} SET ?`, bkModel, (bkError, bkResult) => {
+                            if (bkError) {
                                 connection.rollback();
-                                return reject(err);
+                                return reject(bkError);
                             }
-                            resolve(result);
+
+                            // บันทึกข้อมูลเข้าสู่ตาราง tb_bookings_has_tb_equipments
+                            const tb_bookings_bk_id = bkResult.insertId;
+                            const bkeqModel = [];
+                            value.equipments.forEach(tb_equipments_eq_id => bkeqModel.push([
+                                tb_bookings_bk_id, tb_equipments_eq_id
+                            ]));
+
+                            // หากว่าไม่มีการเลือกอุปกรณ์ห้องประชุม
+                            if (bkeqModel.length <= 0)
+                                return connection.commit(cmError => {
+                                    if (cmError) {
+                                        connection.rollback();
+                                        return reject(cmError);
+                                    }
+                                    resolve(bkResult);
+                                });
+
+                            connection.query(`INSERT INTO ${table.bkeq} (tb_bookings_bk_id, tb_equipments_eq_id) VALUES ?`, [bkeqModel], (bkeqError, bkeqResult) => {
+                                if (bkeqError) {
+                                    connection.rollback();
+                                    return reject(bkeqError);
+                                }
+                                connection.commit(cmError => {
+                                    if (cmError) {
+                                        connection.rollback();
+                                        return reject(cmError);
+                                    }
+                                    resolve(bkeqResult);
+                                });
+                            });
                         });
                     });
-                });
-            });
-
+                })
+                .catch(reject);
         });
     },
     onUpdate(id, value) {
